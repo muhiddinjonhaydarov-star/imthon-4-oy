@@ -1,0 +1,132 @@
+[
+  {
+    "question": "Phishing nima?",
+    "options": [
+      "Tarmoq tezligini oshirish usuli",
+      "Soxta xabarlar orqali maxfiy ma'lumotni o'g'irlash",
+      "Ma'lumotlarni zaxiralash dasturi",
+      "Antivirusni yangilash jarayoni"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "HTTPS dagi \"S\" harfi nimani anglatadi?",
+    "options": [
+      "Server",
+      "Speed",
+      "Secure (xavfsiz, shifrlangan aloqa)",
+      "Standard"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "Ikki faktorli autentifikatsiya (2FA) nima uchun kerak?",
+    "options": [
+      "Internetni tezlashtirish uchun",
+      "Parolni almashtirmaslik uchun",
+      "Fayllarni siqish uchun",
+      "Parolga qo'shimcha himoya qatlami qo'shish uchun"
+    ],
+    "answer": 3
+  },
+  {
+    "question": "Quyidagilardan qaysi biri eng mustahkam parol?",
+    "options": [
+      "T7#kQ9!vL2$x",
+      "123456",
+      "parol2024",
+      "Toshkent"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "Ransomware nima?",
+    "options": [
+      "Tarmoq monitoring dasturi",
+      "Bepul antivirus turi",
+      "Fayllarni shifrlab, to'lov talab qiluvchi zararli dastur",
+      "Parol menejeri"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "Firewall (brandmauer) asosiy vazifasi nima?",
+    "options": [
+      "Tarmoq trafigini qoidalar asosida filtrlash",
+      "Fayllarni arxivlash",
+      "Parollarni generatsiya qilish",
+      "Operatsion tizimni yangilash"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "VPN ning asosiy vazifasi nima?",
+    "options": [
+      "Kompyuterni sovutish",
+      "Trafikni shifrlangan tunnel orqali o'tkazish",
+      "Reklamalarni bloklash",
+      "Fayllarni bulutga yuklash"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "SQL injection hujumi nimaga qaratilgan?",
+    "options": [
+      "Wi-Fi routerga",
+      "Monitor drayveriga",
+      "Veb-ilova ma'lumotlar bazasiga zararli so'rov kiritishga",
+      "Elektron pochta serveriga fizik kirishga"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "DDoS hujumining asosiy maqsadi nima?",
+    "options": [
+      "Parolni topish",
+      "Xizmatni juda ko'p so'rovlar bilan ishdan chiqarish",
+      "Faylni yashirincha o'qish",
+      "Dasturni nusxalash"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "Foydalanuvchi parollarini saqlashning eng to'g'ri usuli qaysi?",
+    "options": [
+      "Ochiq matn ko'rinishida",
+      "Base64 bilan kodlab",
+      "Oddiy MD5 xesh bilan",
+      "Tuz (salt) qo'shilgan bcrypt yoki Argon2 xeshi"
+    ],
+    "answer": 3
+  },
+  {
+    "question": "SSH protokoli odatda qaysi portda ishlaydi?",
+    "options": [
+      "21",
+      "22",
+      "25",
+      "80"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "Ijtimoiy injeneriya (social engineering) nima?",
+    "options": [
+      "Ijtimoiy tarmoqlar dizayni",
+      "Server qurish usuli",
+      "Dasturlash uslubi",
+      "Insonlarning ishonchidan foydalanib, ularni aldash orqali ma'lumot olish"
+    ],
+    "answer": 3
+  },
+  {
+    "question": "Zero-day zaiflik nima?",
+    "options": [
+      "Ishlab chiqaruvchiga hali ma'lum bo'lmagan yoki tuzatilmagan zaiflik",
+      "Bir kunda tuzatilgan xato",
+      "Faqat eski dasturlardagi zaiflik",
+      "Antivirus bazasidagi xato"
+    ],
+    "answer": 0
+  }
+]
