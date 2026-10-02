@@ -44,11 +44,17 @@ def load_questions() -> list[dict]:
             raise ValueError(f"{i + 1}-savolda 4 ta variant bo'lishi kerak")
         if q["answer"] not in range(4):
             raise ValueError(f"{i + 1}-savolda 'answer' 0..3 oralig'ida bo'lishi kerak")
+        q["bolim"] = str(q.get("bolim", "Umumiy"))
     return data
 
 
 QUESTIONS = load_questions()
 TOTAL = len(QUESTIONS)
+
+SECTIONS: dict[str, list[int]] = {}
+for _i, _q in enumerate(QUESTIONS):
+    SECTIONS.setdefault(_q["bolim"], []).append(_i)
+MULTI = len(SECTIONS) > 1
 
 
 @contextmanager
@@ -71,7 +77,8 @@ def init_db() -> None:
                 sid        TEXT    NOT NULL,
                 order_json TEXT    NOT NULL,
                 idx        INTEGER NOT NULL DEFAULT 0,
-                score      INTEGER NOT NULL DEFAULT 0
+                score      INTEGER NOT NULL DEFAULT 0,
+                answers_json TEXT  NOT NULL DEFAULT '[]'
             );
             CREATE TABLE IF NOT EXISTS results (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,6 +92,9 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_results_user ON results (user_id, id DESC);
             """
         )
+        cols = [r["name"] for r in con.execute("PRAGMA table_info(sessions)")]
+        if "answers_json" not in cols:
+            con.execute("ALTER TABLE sessions ADD COLUMN answers_json TEXT NOT NULL DEFAULT '[]'")
 
 
 def grade_for(percent: int) -> str:
@@ -98,7 +108,17 @@ def grade_for(percent: int) -> str:
 
 
 def question_text(number: int, q: dict) -> str:
-    return f"Savol {number}/{TOTAL}\n\n{q['question']}"
+    label = f"📚 Bo'lim: {q['bolim']}\n" if MULTI else ""
+    return f"Savol {number}/{TOTAL}\n{label}\n{q['question']}"
+
+
+def make_order() -> list[int]:
+    order: list[int] = []
+    for indexes in SECTIONS.values():
+        part = indexes[:]
+        random.shuffle(part)
+        order.extend(part)
+    return order
 
 
 def question_kb(sid: str, idx: int, q: dict) -> InlineKeyboardMarkup:
@@ -110,7 +130,12 @@ def question_kb(sid: str, idx: int, q: dict) -> InlineKeyboardMarkup:
         ]
         for i, opt in enumerate(q["options"])
     ]
-    rows.append([InlineKeyboardButton(text="🔄 Qaytadan boshlash", callback_data="restart")])
+    rows.append(
+        [
+            InlineKeyboardButton(text="🔄 Qaytadan boshlash", callback_data="restart"),
+            InlineKeyboardButton(text="⏹ To'xtatish", callback_data=f"stop:{sid}"),
+        ]
+    )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -129,7 +154,7 @@ async def send_question(bot: Bot, chat_id: int, sid: str, order: list[int], idx:
 
 async def start_quiz(bot: Bot, chat_id: int, user_id: int) -> None:
     """Yangi urinish boshlaydi. Eski tugallanmagan urinish bekor qilinadi."""
-    order = random.sample(range(TOTAL), TOTAL)
+    order = make_order()
     sid = uuid.uuid4().hex[:8]
     with conn() as con:
         con.execute(
@@ -153,6 +178,17 @@ async def finish_quiz(bot: Bot, chat_id: int, user_id: int, score: int) -> None:
     await bot_send_result(bot, chat_id, score, percent, grade)
 
 
+async def send_section_stats(bot: Bot, chat_id: int, name: str, correct: int, total: int) -> None:
+    percent = round(correct / total * 100)
+    await bot.send_message(
+        chat_id,
+        f"📚 «{name}» bo'limi tugadi!\n\n"
+        f"Natija: {correct}/{total}\n"
+        f"Foiz: {percent}%\n"
+        f"Baho: {grade_for(percent)}",
+    )
+
+
 async def bot_send_result(bot: Bot, chat_id: int, score: int, percent: int, grade: str) -> None:
     await bot.send_message(
         chat_id,
@@ -161,6 +197,29 @@ async def bot_send_result(bot: Bot, chat_id: int, score: int, percent: int, grad
         f"Foiz: {percent}%\n"
         f"Baho: {grade}\n\n"
         f"Oxirgi natijalaringiz: /natijalarim",
+        reply_markup=begin_kb("🔄 Qaytadan boshlash"),
+    )
+
+
+async def stop_quiz(bot: Bot, chat_id: int, user_id: int, sid: str | None = None) -> None:
+    with conn() as con:
+        s = con.execute("SELECT * FROM sessions WHERE user_id = ?", (user_id,)).fetchone()
+        active = bool(s) and (sid is None or s["sid"] == sid)
+        if active:
+            con.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+
+    if not active:
+        await bot.send_message(
+            chat_id, "Faol test yo'q. Yangi testni boshlang 👇", reply_markup=begin_kb()
+        )
+        return
+
+    await bot.send_message(
+        chat_id,
+        f"⏹ Test to'xtatildi.\n\n"
+        f"Javob berilgan: {s['idx']}/{TOTAL}\n"
+        f"To'g'ri javoblar: {s['score']}\n\n"
+        f"Natija saqlanmadi.",
         reply_markup=begin_kb("🔄 Qaytadan boshlash"),
     )
 
@@ -180,6 +239,21 @@ async def cmd_start(message: Message) -> None:
 @router.message(Command("test", "restart"))
 async def cmd_test(message: Message) -> None:
     await start_quiz(message.bot, message.chat.id, message.from_user.id)
+
+
+@router.message(Command("stop"))
+async def cmd_stop(message: Message) -> None:
+    await stop_quiz(message.bot, message.chat.id, message.from_user.id)
+
+
+@router.callback_query(F.data.startswith("stop:"))
+async def on_stop(cb: CallbackQuery) -> None:
+    await cb.answer()
+    try:
+        await cb.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+    await stop_quiz(cb.bot, cb.message.chat.id, cb.from_user.id, cb.data.split(":", 1)[1])
 
 
 @router.callback_query(F.data.in_({"begin", "restart"}))
@@ -209,10 +283,11 @@ async def on_answer(cb: CallbackQuery) -> None:
             order = json.loads(s["order_json"])
             q = QUESTIONS[order[idx]]
             correct = opt == q["answer"]
+            answers = json.loads(s["answers_json"]) + [int(correct)]
             cur = con.execute(
-                "UPDATE sessions SET idx = idx + 1, score = score + ? "
+                "UPDATE sessions SET idx = idx + 1, score = score + ?, answers_json = ? "
                 "WHERE user_id = ? AND sid = ? AND idx = ?",
-                (int(correct), user_id, sid, idx),
+                (int(correct), json.dumps(answers), user_id, sid, idx),
             )
             valid = cur.rowcount == 1
 
@@ -247,6 +322,14 @@ async def on_answer(cb: CallbackQuery) -> None:
         pass
 
     next_idx = idx + 1
+    section = q["bolim"]
+    if MULTI and (next_idx >= TOTAL or QUESTIONS[order[next_idx]]["bolim"] != section):
+        start = idx
+        while start > 0 and QUESTIONS[order[start - 1]]["bolim"] == section:
+            start -= 1
+        part = answers[start : idx + 1]
+        await send_section_stats(cb.bot, cb.message.chat.id, section, sum(part), len(part))
+
     if next_idx < TOTAL:
         await send_question(cb.bot, cb.message.chat.id, sid, order, next_idx)
     else:
@@ -289,6 +372,7 @@ async def main() -> None:
         [
             BotCommand(command="start", description="Botni ishga tushirish"),
             BotCommand(command="test", description="Testni (qaytadan) boshlash"),
+            BotCommand(command="stop", description="Testni to'xtatish"),
             BotCommand(command="natijalarim", description="Oxirgi 5 ta natija"),
         ]
     )
